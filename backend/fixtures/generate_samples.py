@@ -1,12 +1,24 @@
 from pathlib import Path
+
+from PIL import Image, ImageDraw
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from PIL import Image, ImageDraw, ImageFont
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import (
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 
-def generate_sample_pdf(output_path: Path, date_str: str = "2024-03-15", include_date: bool = True):
+def generate_sample_pdf(
+    output_path: Path,
+    date_str: str = "2024-03-15",
+    *,
+    include_date: bool = True,
+) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     doc = SimpleDocTemplate(str(output_path), pagesize=letter)
     styles = getSampleStyleSheet()
@@ -14,39 +26,56 @@ def generate_sample_pdf(output_path: Path, date_str: str = "2024-03-15", include
 
     # Title
     title_style = ParagraphStyle(
-        'DocTitle',
-        parent=styles['Heading1'],
+        "DocTitle",
+        parent=styles["Heading1"],
         fontSize=18,
         leading=22,
-        textColor=colors.HexColor('#1E3A8A'),
+        textColor=colors.HexColor("#1E3A8A"),
     )
     story.append(Paragraph("QUEST DIAGNOSTICS - CLINICAL REPORT", title_style))
     story.append(Spacer(1, 10))
 
     # Header metadata
-    normal_style = styles['Normal']
-    date_line = f"<b>Collection Date:</b> {date_str}" if include_date else "<b>Collection Date:</b> [NOT SPECIFIED / MISSING]"
+    normal_style = styles["Normal"]
+    date_line = (
+        f"<b>Collection Date:</b> {date_str}"
+        if include_date
+        else "<b>Collection Date:</b> [NOT SPECIFIED / MISSING]"
+    )
     meta_data = [
-        [Paragraph("<b>Patient:</b> Jane Doe", normal_style), Paragraph(date_line, normal_style)],
-        [Paragraph("<b>DOB:</b> 1985-05-12", normal_style), Paragraph("<b>Specimen:</b> Blood / Serum", normal_style)],
-        [Paragraph("<b>Provider:</b> Dr. Robert Smith, MD", normal_style), Paragraph("<b>Status:</b> Final", normal_style)],
+        [
+            Paragraph("<b>Patient:</b> Jane Doe", normal_style),
+            Paragraph(date_line, normal_style),
+        ],
+        [
+            Paragraph("<b>DOB:</b> 1985-05-12", normal_style),
+            Paragraph("<b>Specimen:</b> Blood / Serum", normal_style),
+        ],
+        [
+            Paragraph("<b>Provider:</b> Dr. Robert Smith, MD", normal_style),
+            Paragraph("<b>Status:</b> Final", normal_style),
+        ],
     ]
     meta_table = Table(meta_data, colWidths=[250, 250])
-    meta_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F8FAFC')),
-        ('PADDING', (0, 0), (-1, -1), 6),
-        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
-    ]))
+    meta_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+                ("PADDING", (0, 0), (-1, -1), 6),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+            ]
+        )
+    )
     story.append(meta_table)
     story.append(Spacer(1, 15))
 
     # Test Results
     section_style = ParagraphStyle(
-        'Section',
-        parent=styles['Heading2'],
+        "Section",
+        parent=styles["Heading2"],
         fontSize=14,
         leading=18,
-        textColor=colors.HexColor('#0F172A'),
+        textColor=colors.HexColor("#0F172A"),
     )
     story.append(Paragraph("LIPID PANEL & METABOLIC RESULTS", section_style))
     story.append(Spacer(1, 8))
@@ -67,34 +96,67 @@ def generate_sample_pdf(output_path: Path, date_str: str = "2024-03-15", include
     ]
 
     t = Table(table_data, colWidths=[160, 70, 50, 110, 80])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2563EB')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
-        ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
-        ('TEXTCOLOR', (2, 2), (2, 2), colors.HexColor('#DC2626')),  # Triglycerides H
-        ('TEXTCOLOR', (2, 3), (2, 3), colors.HexColor('#DC2626')),  # Total Chol H
-        ('TEXTCOLOR', (2, 4), (2, 4), colors.HexColor('#D97706')),  # HDL L
-        ('TEXTCOLOR', (2, 5), (2, 5), colors.HexColor('#DC2626')),  # LDL H
-    ]))
+    t.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2563EB")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+                (
+                    "ROWBACKGROUNDS",
+                    (0, 1),
+                    (-1, -1),
+                    [colors.white, colors.HexColor("#F8FAFC")],
+                ),
+                ("ALIGN", (1, 1), (-1, -1), "CENTER"),
+                (
+                    "TEXTCOLOR",
+                    (2, 2),
+                    (2, 2),
+                    colors.HexColor("#DC2626"),
+                ),  # Triglycerides H
+                (
+                    "TEXTCOLOR",
+                    (2, 3),
+                    (2, 3),
+                    colors.HexColor("#DC2626"),
+                ),  # Total Chol H
+                (
+                    "TEXTCOLOR",
+                    (2, 4),
+                    (2, 4),
+                    colors.HexColor("#D97706"),
+                ),  # HDL L
+                (
+                    "TEXTCOLOR",
+                    (2, 5),
+                    (2, 5),
+                    colors.HexColor("#DC2626"),
+                ),  # LDL H
+            ]
+        )
+    )
     story.append(t)
     doc.build(story)
     print(f"Generated PDF: {output_path}")
 
 
-def generate_sample_image(output_path: Path, date_str: str = "2024-08-20"):
+def generate_sample_image(
+    output_path: Path, date_str: str = "2024-08-20"
+) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    img = Image.new('RGB', (800, 600), color=(255, 255, 255))
+    img = Image.new("RGB", (800, 600), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
 
     draw.rectangle([(0, 0), (800, 60)], fill=(37, 99, 235))
     draw.text((20, 18), "LABCORP - BLOOD TEST REPORT", fill=(255, 255, 255))
 
     draw.text((20, 80), f"Date of Service: {date_str}", fill=(30, 41, 59))
-    draw.text((20, 100), "Patient: Jane Doe | DOB: 1985-05-12", fill=(30, 41, 59))
+    draw.text(
+        (20, 100), "Patient: Jane Doe | DOB: 1985-05-12", fill=(30, 41, 59)
+    )
 
     # Results Table Header
     draw.rectangle([(20, 140), (780, 170)], fill=(241, 245, 249))
@@ -118,7 +180,11 @@ def generate_sample_image(output_path: Path, date_str: str = "2024-08-20"):
     for analyte, val, flag, ref, units in rows:
         draw.text((30, y), analyte, fill=(30, 41, 59))
         draw.text((280, y), val, fill=(30, 41, 59))
-        color = (220, 38, 38) if flag == "H" else ((217, 119, 6) if flag == "L" else (22, 101, 52))
+        color = (
+            (220, 38, 38)
+            if flag == "H"
+            else ((217, 119, 6) if flag == "L" else (22, 101, 52))
+        )
         draw.text((380, y), flag, fill=color)
         draw.text((460, y), ref, fill=(100, 116, 139))
         draw.text((640, y), units, fill=(71, 85, 105))
@@ -131,8 +197,19 @@ def generate_sample_image(output_path: Path, date_str: str = "2024-08-20"):
 
 if __name__ == "__main__":
     fixtures_dir = Path(__file__).parent
-    generate_sample_pdf(fixtures_dir / "sample_quest_lab.pdf", date_str="2024-03-15", include_date=True)
-    generate_sample_pdf(fixtures_dir / "sample_lab_2024_06.pdf", date_str="2024-06-10", include_date=True)
-    generate_sample_pdf(fixtures_dir / "sample_no_date_lab.pdf", include_date=False)
-    generate_sample_image(fixtures_dir / "sample_labcorp_lab.png", date_str="2024-08-20")
-
+    generate_sample_pdf(
+        fixtures_dir / "sample_quest_lab.pdf",
+        date_str="2024-03-15",
+        include_date=True,
+    )
+    generate_sample_pdf(
+        fixtures_dir / "sample_lab_2024_06.pdf",
+        date_str="2024-06-10",
+        include_date=True,
+    )
+    generate_sample_pdf(
+        fixtures_dir / "sample_no_date_lab.pdf", include_date=False
+    )
+    generate_sample_image(
+        fixtures_dir / "sample_labcorp_lab.png", date_str="2024-08-20"
+    )

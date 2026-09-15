@@ -1,4 +1,5 @@
 export interface BiomarkerResult {
+  id?: number | null;
   name: string;
   raw_name?: string | null;
   value: number;
@@ -8,6 +9,30 @@ export interface BiomarkerResult {
   reference_range_raw?: string | null;
   flag?: string | null;
   category?: string | null;
+}
+
+export interface BiomarkerInput {
+  name: string;
+  value: number;
+  unit: string;
+  ref_min?: number | null;
+  ref_max?: number | null;
+  reference_range_raw?: string | null;
+  flag?: string | null;
+  category?: string | null;
+}
+
+export interface UploadQueueItem {
+  id: string;
+  file: {
+    uri?: string;
+    name: string;
+    type: string;
+    file?: File | Blob;
+  };
+  status: 'queued' | 'uploading' | 'completed' | 'failed';
+  error?: string;
+  result?: LabDocumentResponse;
 }
 
 export interface LabDocumentResponse {
@@ -55,4 +80,18 @@ export interface BiomarkerHistoryResponse {
   available_units: string[];
   history: BiomarkerHistoryPoint[];
 }
+
+export interface BiomarkerCatalogItem {
+  name: string;
+  category?: string | null;
+  count: number;
+  latest_value?: number | null;
+  latest_unit?: string | null;
+  latest_flag?: string | null;
+  latest_date?: string | null;
+  available_units: string[];
+}
+
+export type SortMode = 'clinical' | 'flagged' | 'alphabetical' | 'custom';
+
 

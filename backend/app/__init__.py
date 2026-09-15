@@ -1,2 +1,1 @@
 """LabTrack Application Package."""
-

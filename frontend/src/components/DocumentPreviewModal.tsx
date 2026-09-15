@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   Image,
   Modal,
   Platform,
@@ -10,25 +11,43 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getLabFileUrl } from '../services/api';
-import { LabDocumentResponse } from '../types';
+import { AddBiomarkerModal } from './AddBiomarkerModal';
+import {
+  addBiomarkerToLab,
+  deleteLabBiomarker,
+  getLabFileUrl,
+  updateLabBiomarker,
+} from '../services/api';
+import { BiomarkerInput, BiomarkerResult, LabDocumentResponse } from '../types';
 
 interface DocumentPreviewModalProps {
   visible: boolean;
   doc: LabDocumentResponse | null;
   onClose: () => void;
+  onBiomarkerChange?: () => void;
 }
 
 export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   visible,
   doc,
   onClose,
+  onBiomarkerChange,
 }) => {
-  if (!doc) return null;
+  const [localDoc, setLocalDoc] = useState<LabDocumentResponse | null>(doc);
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [editingBiomarker, setEditingBiomarker] = useState<BiomarkerResult | null>(null);
 
-  const fileUrl = getLabFileUrl(doc.id, false);
-  const downloadUrl = getLabFileUrl(doc.id, true);
-  const isPdf = doc.mime_type === 'application/pdf' || doc.filename.toLowerCase().endsWith('.pdf');
+  useEffect(() => {
+    setLocalDoc(doc);
+  }, [doc]);
+
+  if (!localDoc) return null;
+
+  const fileUrl = getLabFileUrl(localDoc.id, false);
+  const downloadUrl = getLabFileUrl(localDoc.id, true);
+  const isPdf =
+    localDoc.mime_type === 'application/pdf' ||
+    localDoc.filename.toLowerCase().endsWith('.pdf');
 
   const openInNewTab = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -39,6 +58,76 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   const triggerDownload = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(downloadUrl, '_blank');
+    }
+  };
+
+  const handleSaveBiomarker = async (input: BiomarkerInput) => {
+    if (!localDoc) return;
+    if (editingBiomarker && editingBiomarker.id) {
+      const updated = await updateLabBiomarker(
+        localDoc.id,
+        editingBiomarker.id,
+        input
+      );
+      setLocalDoc((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          biomarkers: prev.biomarkers.map((b) =>
+            b.id === updated.id ? updated : b
+          ),
+        };
+      });
+    } else {
+      const created = await addBiomarkerToLab(localDoc.id, input);
+      setLocalDoc((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          biomarkers: [...prev.biomarkers, created],
+        };
+      });
+    }
+    onBiomarkerChange?.();
+  };
+
+  const handleDeleteBiomarker = async (biomarker: BiomarkerResult) => {
+    if (!localDoc || !biomarker.id) return;
+
+    const doDelete = async () => {
+      try {
+        await deleteLabBiomarker(localDoc.id, biomarker.id!);
+        setLocalDoc((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            biomarkers: prev.biomarkers.filter((b) => b.id !== biomarker.id),
+          };
+        });
+        onBiomarkerChange?.();
+      } catch (err: any) {
+        const msg = err.message || 'Failed to delete parameter';
+        if (Platform.OS === 'web') {
+          window.alert(msg);
+        } else {
+          Alert.alert('Error', msg);
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Delete parameter "${biomarker.name}" from this report?`)) {
+        await doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete Parameter',
+        `Are you sure you want to remove "${biomarker.name}"?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: doDelete },
+        ]
+      );
     }
   };
 
@@ -56,7 +145,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                 style={{ marginRight: 8 }}
               />
               <Text style={styles.title} numberOfLines={1}>
-                {doc.filename}
+                {localDoc.filename}
               </Text>
             </View>
 
@@ -87,15 +176,15 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
           <View style={styles.metaBar}>
             <Text style={styles.metaItem}>
               <Text style={styles.metaLabel}>Test Date: </Text>
-              {doc.test_date || 'Needs Verification'}
+              {localDoc.test_date || 'Needs Verification'}
             </Text>
             <Text style={styles.metaItem}>
               <Text style={styles.metaLabel}>Biomarkers: </Text>
-              {doc.biomarkers.length} extracted
+              {localDoc.biomarkers.length} extracted
             </Text>
             <Text style={styles.metaItem}>
               <Text style={styles.metaLabel}>Size: </Text>
-              {(doc.file_size / 1024).toFixed(1)} KB
+              {(localDoc.file_size / 1024).toFixed(1)} KB
             </Text>
           </View>
 
@@ -137,36 +226,82 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 
           {/* Extracted Biomarkers Drawer */}
           <View style={styles.biomarkersSection}>
-            <Text style={styles.biomarkersTitle}>
-              Extracted Biomarkers ({doc.biomarkers.length})
-            </Text>
+            <View style={styles.biomarkersSectionHeader}>
+              <Text style={styles.biomarkersTitle}>
+                Extracted Biomarkers ({localDoc.biomarkers.length})
+              </Text>
+              <TouchableOpacity
+                style={styles.addBiomarkerBtn}
+                onPress={() => {
+                  setEditingBiomarker(null);
+                  setAddModalVisible(true);
+                }}
+              >
+                <MaterialCommunityIcons name="plus" size={14} color="#FFFFFF" />
+                <Text style={styles.addBiomarkerBtnText}>Add Parameter</Text>
+              </TouchableOpacity>
+            </View>
+
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagScroll}>
-              {doc.biomarkers.map((b, idx) => {
+              {localDoc.biomarkers.map((b, idx) => {
                 const isHigh = b.flag === 'H';
                 const isLow = b.flag === 'L';
                 return (
                   <View
-                    key={`${b.name}-${idx}`}
+                    key={`${b.name}-${b.id || idx}`}
                     style={[
                       styles.biomarkerTag,
                       isHigh && styles.tagHigh,
                       isLow && styles.tagLow,
                     ]}
                   >
-                    <Text style={styles.tagName}>{b.name}:</Text>
-                    <Text style={[styles.tagValue, (isHigh || isLow) && styles.tagValueAlert]}>
-                      {b.value} {b.unit}
-                    </Text>
-                    {b.flag && (
-                      <Text style={[styles.tagFlag, isHigh ? styles.flagHighText : styles.flagLowText]}>
-                        [{b.flag}]
+                    <TouchableOpacity
+                      style={styles.tagClickableArea}
+                      onPress={() => {
+                        setEditingBiomarker(b);
+                        setAddModalVisible(true);
+                      }}
+                    >
+                      <Text style={styles.tagName}>{b.name}:</Text>
+                      <Text style={[styles.tagValue, (isHigh || isLow) && styles.tagValueAlert]}>
+                        {b.value} {b.unit}
                       </Text>
+                      {b.flag && (
+                        <Text
+                          style={[
+                            styles.tagFlag,
+                            isHigh ? styles.flagHighText : styles.flagLowText,
+                          ]}
+                        >
+                          [{b.flag}]
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+
+                    {b.id && (
+                      <TouchableOpacity
+                        style={styles.tagDeleteBtn}
+                        onPress={() => handleDeleteBiomarker(b)}
+                      >
+                        <MaterialCommunityIcons name="close" size={13} color="#94A3B8" />
+                      </TouchableOpacity>
                     )}
                   </View>
                 );
               })}
             </ScrollView>
           </View>
+
+          {/* Add / Edit Biomarker Modal */}
+          <AddBiomarkerModal
+            visible={addModalVisible}
+            initialData={editingBiomarker}
+            onClose={() => {
+              setAddModalVisible(false);
+              setEditingBiomarker(null);
+            }}
+            onSave={handleSaveBiomarker}
+          />
         </View>
       </View>
     </Modal>
@@ -292,13 +427,32 @@ const styles = StyleSheet.create({
     borderTopColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
   },
+  biomarkersSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   biomarkersTitle: {
     fontSize: 12,
     fontWeight: '700',
     color: '#475569',
-    marginBottom: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  addBiomarkerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 3,
+  },
+  addBiomarkerBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
   },
   tagScroll: {
     flexDirection: 'row',
@@ -307,12 +461,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 10,
+    paddingLeft: 10,
+    paddingRight: 6,
     paddingVertical: 5,
     borderRadius: 8,
     marginRight: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+  },
+  tagClickableArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tagDeleteBtn: {
+    marginLeft: 6,
+    padding: 2,
   },
   tagHigh: {
     backgroundColor: '#FEE2E2',

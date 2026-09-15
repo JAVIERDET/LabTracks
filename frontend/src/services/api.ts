@@ -1,6 +1,9 @@
 import { Platform } from 'react-native';
 import {
+  BiomarkerCatalogItem,
   BiomarkerHistoryResponse,
+  BiomarkerInput,
+  BiomarkerResult,
   LabDocumentResponse,
   LabDocumentSummary,
 } from '../types';
@@ -98,6 +101,52 @@ export const deleteLabDocument = async (id: number): Promise<void> => {
   if (!res.ok) throw new Error('Failed to delete lab document');
 };
 
+export const addBiomarkerToLab = async (
+  docId: number,
+  biomarker: BiomarkerInput
+): Promise<BiomarkerResult> => {
+  const res = await fetch(`${BASE_URL}/labs/${docId}/biomarkers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(biomarker),
+  });
+  if (!res.ok) {
+    const errorText = await responseSafeText(res);
+    throw new Error(errorText || 'Failed to add biomarker');
+  }
+  return res.json();
+};
+
+export const updateLabBiomarker = async (
+  docId: number,
+  biomarkerId: number,
+  biomarker: Partial<BiomarkerInput>
+): Promise<BiomarkerResult> => {
+  const res = await fetch(`${BASE_URL}/labs/${docId}/biomarkers/${biomarkerId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(biomarker),
+  });
+  if (!res.ok) {
+    const errorText = await responseSafeText(res);
+    throw new Error(errorText || 'Failed to update biomarker');
+  }
+  return res.json();
+};
+
+export const deleteLabBiomarker = async (
+  docId: number,
+  biomarkerId: number
+): Promise<void> => {
+  const res = await fetch(`${BASE_URL}/labs/${docId}/biomarkers/${biomarkerId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const errorText = await responseSafeText(res);
+    throw new Error(errorText || 'Failed to delete biomarker');
+  }
+};
+
 export const getLabFileUrl = (id: number, download: boolean = false): string => {
   return `${BASE_URL}/labs/${id}/file?download=${download}`;
 };
@@ -105,6 +154,12 @@ export const getLabFileUrl = (id: number, download: boolean = false): string => 
 export const listBiomarkers = async (): Promise<string[]> => {
   const res = await fetch(`${BASE_URL}/biomarkers`);
   if (!res.ok) throw new Error('Failed to list biomarkers');
+  return res.json();
+};
+
+export const getBiomarkerCatalog = async (): Promise<BiomarkerCatalogItem[]> => {
+  const res = await fetch(`${BASE_URL}/biomarkers/catalog`);
+  if (!res.ok) throw new Error('Failed to load biomarker catalog');
   return res.json();
 };
 

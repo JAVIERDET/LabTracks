@@ -1,7 +1,8 @@
 import hashlib
 import mimetypes
 from pathlib import Path
-from typing import Optional, Protocol, Tuple
+from typing import Protocol
+
 import aiofiles
 import aiofiles.os
 
@@ -9,7 +10,9 @@ from app.core.config import settings
 
 
 class StorageService(Protocol):
-    async def save_file(self, content: bytes, original_filename: str) -> Tuple[str, str, int]:
+    async def save_file(
+        self, content: bytes, original_filename: str
+    ) -> tuple[str, str, int]:
         """Save file content. Returns (stored_path, sha256_hash, file_size)."""
         ...
 
@@ -23,7 +26,7 @@ class StorageService(Protocol):
 
 
 class LocalStorageService:
-    def __init__(self, base_dir: Optional[Path] = None):
+    def __init__(self, base_dir: Path | None = None) -> None:
         self.base_dir = (base_dir or settings.UPLOAD_DIR).resolve()
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
@@ -33,7 +36,9 @@ class LocalStorageService:
         hasher.update(content)
         return hasher.hexdigest()
 
-    async def save_file(self, content: bytes, original_filename: str) -> Tuple[str, str, int]:
+    async def save_file(
+        self, content: bytes, original_filename: str
+    ) -> tuple[str, str, int]:
         file_hash = self.calculate_hash(content)
         extension = Path(original_filename).suffix.lower()
         if not extension:
@@ -59,7 +64,8 @@ class LocalStorageService:
             if alt_path.exists():
                 p = alt_path
             else:
-                raise FileNotFoundError(f"Stored file not found: {file_path}")
+                msg = f"Stored file not found: {file_path}"
+                raise FileNotFoundError(msg)
 
         async with aiofiles.open(p, "rb") as f:
             return await f.read()
@@ -78,13 +84,13 @@ class LocalStorageService:
     def guess_mime_type(filename: str, content: bytes) -> str:
         if content.startswith(b"%PDF"):
             return "application/pdf"
-        elif content.startswith(b"\x89PNG"):
+        if content.startswith(b"\x89PNG"):
             return "image/png"
-        elif content.startswith(b"\xff\xd8\xff"):
+        if content.startswith(b"\xff\xd8\xff"):
             return "image/jpeg"
-        elif content.startswith(b"GIF8"):
+        if content.startswith(b"GIF8"):
             return "image/gif"
-        elif content.startswith(b"RIFF") and b"WEBP" in content[:16]:
+        if content.startswith(b"RIFF") and b"WEBP" in content[:16]:
             return "image/webp"
 
         guessed, _ = mimetypes.guess_type(filename)
@@ -92,4 +98,3 @@ class LocalStorageService:
 
 
 storage_service = LocalStorageService()
-

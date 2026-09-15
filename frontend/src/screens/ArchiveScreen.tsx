@@ -235,6 +235,7 @@ export const ArchiveScreen: React.FC<ArchiveScreenProps> = ({
           setPreviewVisible(false);
           setSelectedDoc(null);
         }}
+        onBiomarkerChange={loadDocuments}
       />
 
       {/* Edit Date Modal */}

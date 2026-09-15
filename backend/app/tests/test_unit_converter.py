@@ -1,4 +1,5 @@
 import pytest
+
 from app.services.unit_converter import unit_converter
 
 
@@ -13,11 +14,60 @@ def test_unit_normalization():
 
 def test_biomarker_canonical_naming():
     assert unit_converter.canonical_biomarker_name("glucose") == "Glucose"
-    assert unit_converter.canonical_biomarker_name("fasting blood sugar") == "Glucose"
-    assert unit_converter.canonical_biomarker_name("triglycerides") == "Triglycerides"
-    assert unit_converter.canonical_biomarker_name("hdl-c") == "HDL Cholesterol"
-    assert unit_converter.canonical_biomarker_name("ldl (calculated)") == "LDL Cholesterol"
-    assert unit_converter.canonical_biomarker_name("cholesterol, total") == "Total Cholesterol"
+    assert (
+        unit_converter.canonical_biomarker_name("fasting blood sugar")
+        == "Glucose"
+    )
+    assert (
+        unit_converter.canonical_biomarker_name("triglycerides")
+        == "Triglycerides"
+    )
+    assert (
+        unit_converter.canonical_biomarker_name("hdl-c") == "HDL Cholesterol"
+    )
+    assert (
+        unit_converter.canonical_biomarker_name("ldl (calculated)")
+        == "LDL Cholesterol"
+    )
+    assert (
+        unit_converter.canonical_biomarker_name("cholesterol, total")
+        == "Total Cholesterol"
+    )
+    # Spanish and alias tests
+    assert (
+        unit_converter.canonical_biomarker_name("LDL Colesterol")
+        == "LDL Cholesterol"
+    )
+    assert (
+        unit_converter.canonical_biomarker_name("Colesterol LDL")
+        == "LDL Cholesterol"
+    )
+    assert (
+        unit_converter.canonical_biomarker_name("Colesterol No-HDL")
+        == "Non-HDL Cholesterol"
+    )
+    assert (
+        unit_converter.canonical_biomarker_name("Acido Úrico") == "Uric Acid"
+    )
+    assert (
+        unit_converter.canonical_biomarker_name("ácido úrico") == "Uric Acid"
+    )
+    assert (
+        unit_converter.canonical_biomarker_name(
+            "Hemoglobina A1c (IFCC) por HPLC"
+        )
+        == "HbA1c"
+    )
+    assert (
+        unit_converter.canonical_biomarker_name('PROTEINA "C" REACTIVA')
+        == "C-Reactive Protein"
+    )
+    assert (
+        unit_converter.canonical_biomarker_name(
+            "Volumen corpuscular medio (VCM)"
+        )
+        == "MCV"
+    )
 
 
 def test_glucose_conversion():
@@ -32,13 +82,17 @@ def test_glucose_conversion():
 
 def test_cholesterol_conversion():
     # 200 mg/dL -> mmol/L: 200 / 38.67 = 5.17 mmol/L
-    mmol = unit_converter.convert_value("Total Cholesterol", 200.0, "mg/dL", "mmol/L")
+    mmol = unit_converter.convert_value(
+        "Total Cholesterol", 200.0, "mg/dL", "mmol/L"
+    )
     assert pytest.approx(mmol, 0.05) == 5.17
 
 
 def test_triglycerides_conversion():
     # 150 mg/dL -> mmol/L: 150 / 88.57 = 1.69 mmol/L
-    mmol = unit_converter.convert_value("Triglycerides", 150.0, "mg/dL", "mmol/L")
+    mmol = unit_converter.convert_value(
+        "Triglycerides", 150.0, "mg/dL", "mmol/L"
+    )
     assert pytest.approx(mmol, 0.05) == 1.69
 
 
@@ -67,4 +121,3 @@ def test_convert_datapoint_with_limits():
     assert pytest.approx(val, 0.05) == 1.69
     assert r_min is None
     assert pytest.approx(r_max, 0.05) == 1.69
-

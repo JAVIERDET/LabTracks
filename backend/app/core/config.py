@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Union
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -10,7 +10,9 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/labtrack"
+    DATABASE_URL: str = (
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/labtrack"
+    )
 
     # Gemini
     GEMINI_API_KEY: str = ""
@@ -20,11 +22,11 @@ class Settings(BaseSettings):
     UPLOAD_DIR: Path = Path("./uploads")
 
     # CORS
-    CORS_ORIGINS: Union[str, List[str]] = ["*"]
+    CORS_ORIGINS: str | list[str] = ["*"]
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+    def assemble_cors_origins(cls, v: str | list[str]) -> list[str]:
         if isinstance(v, str):
             if v == "*":
                 return ["*"]
@@ -40,4 +42,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

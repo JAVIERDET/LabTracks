@@ -140,3 +140,165 @@ export const convertPointClient = (
   };
 };
 
+export const CLINICAL_PANEL_ORDER: Record<string, number> = {
+  'Lipid Panel': 1,
+  'Metabolic Panel': 2,
+  'Liver Function': 3,
+  'Kidney Function': 4,
+  'Electrolytes': 5,
+  'Hematology': 6,
+  'Thyroid': 7,
+  'Cardiovascular & Inflammation': 8,
+  'Vitamins': 9,
+  'Other': 10,
+};
+
+export const detectClinicalPanel = (markerName: string): string => {
+  const lower = markerName.toLowerCase();
+  if (
+    lower.includes('cholesterol') ||
+    lower.includes('colesterol') ||
+    lower.includes('hdl') ||
+    lower.includes('ldl') ||
+    lower.includes('triglycerid') ||
+    lower.includes('triglicérid') ||
+    lower.includes('triglicerid') ||
+    lower.includes('apob') ||
+    lower.includes('lipid') ||
+    lower.includes('lipoprote')
+  ) {
+    return 'Lipid Panel';
+  }
+  if (
+    lower.includes('glucose') ||
+    lower.includes('glucosa') ||
+    lower.includes('hba1c') ||
+    lower.includes('insulin') ||
+    lower.includes('sugar')
+  ) {
+    return 'Metabolic Panel';
+  }
+  if (
+    lower.includes('alt') ||
+    lower.includes('ast') ||
+    lower.includes('gpt') ||
+    lower.includes('got') ||
+    lower.includes('ggt') ||
+    lower.includes('bilirubin') ||
+    lower.includes('bilirrubina') ||
+    lower.includes('fosfatasa') ||
+    lower.includes('alkaline phosphatase')
+  ) {
+    return 'Liver Function';
+  }
+  if (
+    lower.includes('creatinin') ||
+    lower.includes('bun') ||
+    lower.includes('urea') ||
+    lower.includes('uric') ||
+    lower.includes('úrico') ||
+    lower.includes('urico') ||
+    lower.includes('filtrado') ||
+    lower.includes('egfr')
+  ) {
+    return 'Kidney Function';
+  }
+  if (
+    lower.includes('sodio') ||
+    lower.includes('sodium') ||
+    lower.includes('potasio') ||
+    lower.includes('potassium') ||
+    lower.includes('cloro') ||
+    lower.includes('chloride') ||
+    lower.includes('calcio') ||
+    lower.includes('calcium') ||
+    lower.includes('magnesio') ||
+    lower.includes('magnesium')
+  ) {
+    return 'Electrolytes';
+  }
+  if (
+    lower.includes('hemoglobin') ||
+    lower.includes('hematocrit') ||
+    lower.includes('hematocrito') ||
+    lower.includes('plaqueta') ||
+    lower.includes('platelet') ||
+    lower.includes('leucocit') ||
+    lower.includes('leukocyt') ||
+    lower.includes('hematie') ||
+    lower.includes('vcm') ||
+    lower.includes('mcv') ||
+    lower.includes('hcm') ||
+    lower.includes('mch') ||
+    lower.includes('linfocit') ||
+    lower.includes('lymphocyt') ||
+    lower.includes('neutrofil') ||
+    lower.includes('neutrophil')
+  ) {
+    return 'Hematology';
+  }
+  if (
+    lower.includes('tsh') ||
+    lower.includes('t3') ||
+    lower.includes('t4') ||
+    lower.includes('tiro')
+  ) {
+    return 'Thyroid';
+  }
+  if (
+    lower.includes('crp') ||
+    lower.includes('pcr') ||
+    lower.includes('homociste') ||
+    lower.includes('homocyst') ||
+    lower.includes('ferritin') ||
+    lower.includes('vsg') ||
+    lower.includes('esr')
+  ) {
+    return 'Cardiovascular & Inflammation';
+  }
+  if (
+    lower.includes('vitamin') ||
+    lower.includes('vitamina') ||
+    lower.includes('folato') ||
+    lower.includes('folate') ||
+    lower.includes('b12')
+  ) {
+    return 'Vitamins';
+  }
+  return 'Other';
+};
+
+export const sortBiomarkersIntelligently = (
+  markerNames: string[],
+  mode: 'clinical' | 'flagged' | 'alphabetical' | 'custom',
+  catalogMap?: Record<string, { latest_flag?: string | null; category?: string | null }>
+): string[] => {
+  const copy = [...markerNames];
+  if (mode === 'custom') {
+    return copy;
+  }
+  if (mode === 'alphabetical') {
+    return copy.sort((a, b) => a.localeCompare(b));
+  }
+  if (mode === 'flagged') {
+    return copy.sort((a, b) => {
+      const flagA = catalogMap?.[a]?.latest_flag || '';
+      const flagB = catalogMap?.[b]?.latest_flag || '';
+      const isAbnormalA = flagA === 'H' || flagA === 'L' ? 1 : 0;
+      const isAbnormalB = flagB === 'H' || flagB === 'L' ? 1 : 0;
+      if (isAbnormalA !== isAbnormalB) return isAbnormalB - isAbnormalA;
+      return a.localeCompare(b);
+    });
+  }
+  // Clinical Panel ordering (Default)
+  return copy.sort((a, b) => {
+    const panelA = detectClinicalPanel(a);
+    const panelB = detectClinicalPanel(b);
+    const orderA = CLINICAL_PANEL_ORDER[panelA] ?? 99;
+    const orderB = CLINICAL_PANEL_ORDER[panelB] ?? 99;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.localeCompare(b);
+  });
+};
+
+

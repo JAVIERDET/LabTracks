@@ -13,43 +13,61 @@ import * as ImagePicker from 'expo-image-picker';
 import { UploadFileParam } from '../services/api';
 
 interface DropzoneProps {
-  onFileSelect: (fileParam: UploadFileParam) => void;
+  onFileSelect?: (fileParam: UploadFileParam) => void;
+  onFilesSelect?: (files: UploadFileParam[]) => void;
   isLoading: boolean;
   selectedFile: UploadFileParam | null;
+  selectedFilesCount?: number;
   onClear: () => void;
 }
 
 export const Dropzone: React.FC<DropzoneProps> = ({
   onFileSelect,
+  onFilesSelect,
   isLoading,
   selectedFile,
+  selectedFilesCount = 0,
   onClear,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const emitFiles = (files: UploadFileParam[]) => {
+    if (!files.length) return;
+    if (onFilesSelect) {
+      onFilesSelect(files);
+    } else if (onFileSelect) {
+      onFileSelect(files[0]);
+    }
+  };
+
   const handleWebFileChange = (e: any) => {
     const files = e.target?.files;
-    if (files && files[0]) {
-      const f = files[0];
-      onFileSelect({
+    if (files && files.length > 0) {
+      const parsed: UploadFileParam[] = Array.from(files).map((f: any) => ({
         file: f,
         name: f.name,
         type: f.type || 'application/pdf',
-      });
+      }));
+      emitFiles(parsed);
+    }
+    if (e.target) {
+      e.target.value = '';
     }
   };
 
   const handleWebDrop = (e: any) => {
     e.preventDefault();
     setIsDragOver(false);
-    if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
-      const f = e.dataTransfer.files[0];
-      onFileSelect({
-        file: f,
-        name: f.name,
-        type: f.type || 'application/pdf',
-      });
+    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      const parsed: UploadFileParam[] = Array.from(e.dataTransfer.files).map(
+        (f: any) => ({
+          file: f,
+          name: f.name,
+          type: f.type || 'application/pdf',
+        })
+      );
+      emitFiles(parsed);
     }
   };
 
@@ -58,15 +76,16 @@ export const Dropzone: React.FC<DropzoneProps> = ({
       const res = await DocumentPicker.getDocumentAsync({
         type: ['application/pdf', 'image/*'],
         copyToCacheDirectory: true,
+        multiple: true,
       });
-      if (!res.canceled && res.assets && res.assets[0]) {
-        const asset = res.assets[0];
-        onFileSelect({
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        const parsed: UploadFileParam[] = res.assets.map((asset) => ({
           uri: asset.uri,
           name: asset.name,
           type: asset.mimeType || 'application/pdf',
           file: (asset as any).file,
-        });
+        }));
+        emitFiles(parsed);
       }
     } catch (err) {
       console.error('Error picking document:', err);
@@ -83,15 +102,15 @@ export const Dropzone: React.FC<DropzoneProps> = ({
       const res = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         quality: 0.9,
+        allowsMultipleSelection: true,
       });
-      if (!res.canceled && res.assets && res.assets[0]) {
-        const asset = res.assets[0];
-        const name = asset.fileName || `lab_photo_${Date.now()}.jpg`;
-        onFileSelect({
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        const parsed: UploadFileParam[] = res.assets.map((asset, idx) => ({
           uri: asset.uri,
-          name: name,
+          name: asset.fileName || `lab_photo_${Date.now()}_${idx}.jpg`,
           type: asset.mimeType || 'image/jpeg',
-        });
+        }));
+        emitFiles(parsed);
       }
     } catch (err) {
       console.error('Error picking image:', err);
@@ -104,6 +123,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
       {Platform.OS === 'web' && (
         <input
           type="file"
+          multiple
           ref={fileInputRef as any}
           style={{ display: 'none' }}
           accept="application/pdf,image/png,image/jpeg,image/webp"
@@ -111,27 +131,41 @@ export const Dropzone: React.FC<DropzoneProps> = ({
         />
       )}
 
-      {selectedFile ? (
+      {selectedFile || selectedFilesCount > 0 ? (
         <View style={styles.selectedContainer}>
           <View style={styles.fileIconWrapper}>
             <MaterialCommunityIcons
-              name={selectedFile.name.endsWith('.pdf') ? 'file-pdf-box' : 'file-image'}
+              name={
+                selectedFilesCount > 1
+                  ? 'file-multiple'
+                  : selectedFile?.name.endsWith('.pdf')
+                  ? 'file-pdf-box'
+                  : 'file-image'
+              }
               size={36}
               color="#2563EB"
             />
           </View>
           <View style={styles.selectedDetails}>
             <Text style={styles.selectedFileName} numberOfLines={1}>
-              {selectedFile.name}
+              {selectedFilesCount > 1
+                ? `${selectedFilesCount} Documents Selected`
+                : selectedFile?.name}
             </Text>
             <Text style={styles.selectedFileType}>
-              {selectedFile.type}
+              {selectedFilesCount > 1
+                ? `Currently processing: ${selectedFile?.name || 'Sequential queue'}`
+                : selectedFile?.type}
             </Text>
           </View>
 
           {!isLoading && (
             <TouchableOpacity onPress={onClear} style={styles.clearButton}>
-              <MaterialCommunityIcons name="close-circle-outline" size={24} color="#94A3B8" />
+              <MaterialCommunityIcons
+                name="close-circle-outline"
+                size={24}
+                color="#94A3B8"
+              />
             </TouchableOpacity>
           )}
         </View>
