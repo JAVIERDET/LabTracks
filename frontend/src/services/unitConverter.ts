@@ -1,0 +1,142 @@
+export interface ConvertedDataPoint {
+  value: number;
+  ref_min: number | null;
+  ref_max: number | null;
+  unit: string;
+}
+
+export const getBiomarkerCategory = (markerName: string): string | null => {
+  const lower = markerName.toLowerCase();
+  if (lower.includes('glucose') || lower.includes('blood sugar') || lower.includes('fbs')) return 'glucose';
+  if (lower.includes('triglyceride')) return 'triglycerides';
+  if (lower.includes('cholesterol') || lower.includes('hdl') || lower.includes('ldl')) return 'cholesterol';
+  if (lower.includes('protein') || lower.includes('albumin')) return 'protein';
+  if (lower.includes('creatinine')) return 'creatinine';
+  if (lower.includes('bilirubin')) return 'bilirubin';
+  if (lower.includes('calcium')) return 'calcium';
+  if (lower.includes('bun') || lower.includes('urea')) return 'bun';
+  if (lower.includes('vitamin d') || lower.includes('25-oh')) return 'vitamin_d';
+  if (lower.includes('hemoglobin') || lower === 'hgb' || lower === 'hb') return 'hemoglobin';
+  return null;
+};
+
+export const getAvailableUnitsForMarker = (
+  markerName: string,
+  currentUnit: string
+): string[] => {
+  const cat = getBiomarkerCategory(markerName);
+  const unitsMap: Record<string, string[]> = {
+    glucose: ['mg/dL', 'mmol/L'],
+    cholesterol: ['mg/dL', 'mmol/L'],
+    triglycerides: ['mg/dL', 'mmol/L'],
+    protein: ['g/dL', 'g/L'],
+    creatinine: ['mg/dL', 'µmol/L'],
+    bilirubin: ['mg/dL', 'µmol/L'],
+    calcium: ['mg/dL', 'mmol/L'],
+    bun: ['mg/dL', 'mmol/L'],
+    vitamin_d: ['ng/mL', 'nmol/L'],
+    hemoglobin: ['g/dL', 'g/L', 'mmol/L'],
+  };
+
+  if (cat && unitsMap[cat]) {
+    const list = [...unitsMap[cat]];
+    if (currentUnit && !list.includes(currentUnit)) {
+      list.push(currentUnit);
+    }
+    return list;
+  }
+  return currentUnit ? [currentUnit] : [];
+};
+
+export const convertValueClient = (
+  markerName: string,
+  val: number | null | undefined,
+  fromUnit: string,
+  toUnit: string
+): number | null => {
+  if (val === null || val === undefined || isNaN(val)) return null;
+  if (!fromUnit || !toUnit || fromUnit === toUnit) return Number(val.toFixed(2));
+
+  const cat = getBiomarkerCategory(markerName);
+
+  // Glucose: 1 mmol/L = 18.0182 mg/dL
+  if (cat === 'glucose') {
+    if (fromUnit === 'mg/dL' && toUnit === 'mmol/L') return Number((val / 18.0182).toFixed(2));
+    if (fromUnit === 'mmol/L' && toUnit === 'mg/dL') return Number((val * 18.0182).toFixed(1));
+  }
+
+  // Cholesterol, HDL, LDL: 1 mmol/L = 38.67 mg/dL
+  if (cat === 'cholesterol') {
+    if (fromUnit === 'mg/dL' && toUnit === 'mmol/L') return Number((val / 38.67).toFixed(2));
+    if (fromUnit === 'mmol/L' && toUnit === 'mg/dL') return Number((val * 38.67).toFixed(1));
+  }
+
+  // Triglycerides: 1 mmol/L = 88.57 mg/dL
+  if (cat === 'triglycerides') {
+    if (fromUnit === 'mg/dL' && toUnit === 'mmol/L') return Number((val / 88.57).toFixed(2));
+    if (fromUnit === 'mmol/L' && toUnit === 'mg/dL') return Number((val * 88.57).toFixed(1));
+  }
+
+  // Proteins: 1 g/dL = 10 g/L
+  if (cat === 'protein') {
+    if (fromUnit === 'g/dL' && toUnit === 'g/L') return Number((val * 10).toFixed(1));
+    if (fromUnit === 'g/L' && toUnit === 'g/dL') return Number((val / 10).toFixed(2));
+  }
+
+  // Creatinine: 1 mg/dL = 88.4 µmol/L
+  if (cat === 'creatinine') {
+    if (fromUnit === 'mg/dL' && (toUnit === 'µmol/L' || toUnit === 'umol/L')) return Number((val * 88.4).toFixed(1));
+    if ((fromUnit === 'µmol/L' || fromUnit === 'umol/L') && toUnit === 'mg/dL') return Number((val / 88.4).toFixed(2));
+  }
+
+  // Bilirubin: 1 mg/dL = 17.1 µmol/L
+  if (cat === 'bilirubin') {
+    if (fromUnit === 'mg/dL' && (toUnit === 'µmol/L' || toUnit === 'umol/L')) return Number((val * 17.1).toFixed(1));
+    if ((fromUnit === 'µmol/L' || fromUnit === 'umol/L') && toUnit === 'mg/dL') return Number((val / 17.1).toFixed(2));
+  }
+
+  // Calcium: 1 mmol/L = 4.008 mg/dL
+  if (cat === 'calcium') {
+    if (fromUnit === 'mg/dL' && toUnit === 'mmol/L') return Number((val / 4.008).toFixed(2));
+    if (fromUnit === 'mmol/L' && toUnit === 'mg/dL') return Number((val * 4.008).toFixed(2));
+  }
+
+  // BUN: 1 mmol/L = 2.8 mg/dL
+  if (cat === 'bun') {
+    if (fromUnit === 'mg/dL' && toUnit === 'mmol/L') return Number((val / 2.8).toFixed(2));
+    if (fromUnit === 'mmol/L' && toUnit === 'mg/dL') return Number((val * 2.8).toFixed(1));
+  }
+
+  // Vitamin D: 1 ng/mL = 2.496 nmol/L
+  if (cat === 'vitamin_d') {
+    if (fromUnit === 'ng/mL' && toUnit === 'nmol/L') return Number((val * 2.496).toFixed(1));
+    if (fromUnit === 'nmol/L' && toUnit === 'ng/mL') return Number((val / 2.496).toFixed(1));
+  }
+
+  // Hemoglobin: 1 g/dL = 10 g/L, 1 mmol/L = 1.611 g/dL
+  if (cat === 'hemoglobin') {
+    if (fromUnit === 'g/dL' && toUnit === 'g/L') return Number((val * 10).toFixed(1));
+    if (fromUnit === 'g/L' && toUnit === 'g/dL') return Number((val / 10).toFixed(2));
+    if (fromUnit === 'g/dL' && toUnit === 'mmol/L') return Number((val / 1.611).toFixed(2));
+    if (fromUnit === 'mmol/L' && toUnit === 'g/dL') return Number((val * 1.611).toFixed(2));
+  }
+
+  return Number(val.toFixed(2));
+};
+
+export const convertPointClient = (
+  markerName: string,
+  value: number,
+  refMin: number | null | undefined,
+  refMax: number | null | undefined,
+  fromUnit: string,
+  toUnit: string
+): ConvertedDataPoint => {
+  return {
+    value: convertValueClient(markerName, value, fromUnit, toUnit) ?? value,
+    ref_min: convertValueClient(markerName, refMin, fromUnit, toUnit),
+    ref_max: convertValueClient(markerName, refMax, fromUnit, toUnit),
+    unit: toUnit,
+  };
+};
+

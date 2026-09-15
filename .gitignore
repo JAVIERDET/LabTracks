@@ -218,3 +218,17 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+.expo/
+frontend/.expo/
+dist/
+frontend/dist/
+web-build/
+
+# Uploads and local storage
+uploads/
+backend/uploads/
+*.sqlite3

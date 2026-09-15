@@ -1,0 +1,35 @@
+[project]
+name = "labtrack-backend"
+version = "0.1.0"
+description = "LabTrack backend API for blood test biomarker extraction, standardization, and analytics"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "sqlalchemy>=2.0.36",
+    "psycopg[binary]>=3.2.3",
+    "asyncpg>=0.30.0",
+    "aiosqlite>=0.20.0",
+    "google-genai>=2.3.0",
+    "python-multipart>=0.0.18",
+    "aiofiles>=24.1.0",
+    "pypdf>=5.1.0",
+    "pillow>=11.0.0",
+    "reportlab>=4.2.5",
+    "httpx>=0.28.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["app/tests"]
